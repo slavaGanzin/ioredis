@@ -4,7 +4,7 @@ var childProcess = require('child_process');
 var Redis = require('../');
 
 console.log('==========================');
-console.log('redis: ' + require('../package.json').version);
+console.log('ioredis: ' + require('../package.json').version);
 var os = require('os');
 console.log('CPU: ' + os.cpus().length);
 console.log('OS: ' + os.platform() + ' ' + os.arch());
@@ -31,6 +31,30 @@ var quit = function () {
   redisJ.quit();
 };
 
+var pipelineQuery = []
+for (let i = 0; i < 1000; i++) {
+  pipelineQuery.push(['set', 'foo', 'bar'])
+}
+
+suite('multi: SET foo bar', function () {
+  set('mintime', 5000);
+  set('concurrency', 3);
+
+  before(function (start) {
+    waitReady(start);
+  });
+
+  bench('javascript parser + dropBufferSupport: true', function (next) {
+    redisJD.multi(pipelineQuery).exec(next);
+  });
+
+  bench('javascript parser', function (next) {
+    redisJ.multi(pipelineQuery).exec(next);
+  });
+
+  after(quit);
+})
+
 suite('SET foo bar', function () {
   set('mintime', 5000);
   set('concurrency', 300);
@@ -48,6 +72,7 @@ suite('SET foo bar', function () {
 
   after(quit);
 });
+
 
 suite('LRANGE foo 0 99', function () {
   set('mintime', 5000);
